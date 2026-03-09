@@ -249,7 +249,8 @@ Two lines quoted from your original file (kept here for reference):
   <h1>BC Runner. Made by James Degenhardt</h1>
   <div class="stat">Time: <strong id="timeSurvived">0.0</strong>s</div>
   <div class="stat">Best Time: <strong id="bestTime">0.0</strong>s</div>
-  <div class="stat">Ghost Power: <strong id="ghostTimer">0.0</strong>s</div>
+  <div class="stat">Ghost time: <strong id="ghostTimer">0.0</strong>s</div>
+<button onclick="openGameBlank()">Launch in about:blank</button>
 </div>
 
 
@@ -641,6 +642,28 @@ let ghostEndTime = 0;
   }
 
   // Spawn: set enemy speed to match player if desired
+
+  function openGameBlank(){
+
+const win = window.open("about:blank","_blank");
+
+const iframe = win.document.createElement("iframe");
+
+iframe.src = window.location.href;
+iframe.style.position = "fixed";
+iframe.style.top = "0";
+iframe.style.left = "0";
+iframe.style.width = "100%";
+iframe.style.height = "100%";
+iframe.style.border = "none";
+
+win.document.body.style.margin = "0";
+win.document.body.appendChild(iframe);
+
+}
+
+
+  
   function drawMinimap(){
 
   miniCtx.clearRect(0,0,MINI_SIZE,MINI_SIZE);
