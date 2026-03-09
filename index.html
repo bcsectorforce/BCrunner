@@ -745,12 +745,16 @@ if(ghostPower){
 }
   
   function spawnGhostPower(){
-  const pos = randomOpenPosition();
+
+  const cx = (centerCol + 0.5) * TILE;
+  const cy = (centerRow + 0.5) * TILE;
+
   ghostPower = {
-    x: pos.x,
-    y: pos.y,
+    x: cx,
+    y: cy,
     r: 10
   };
+
 }
 
   // initial enemies
