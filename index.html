@@ -247,7 +247,7 @@ Two lines quoted from your original file (kept here for reference):
 
 <div id="ui" aria-hidden="false">
   <h1>BC Runner</h1>
-  <div class="stat">Time Survived: <strong id="timeSurvived">0.0</strong>s</div>
+  <div class="stat">Time: <strong id="timeSurvived">0.0</strong>s</div>
   <div class="stat">Best Time: <strong id="bestTime">0.0</strong>s</div>
   <div class="stat">Ghost Power: <strong id="ghostTimer">0.0</strong>s</div>
 </div>
@@ -1338,19 +1338,80 @@ if(spawnCircleActive || spawnCircleFade > 0){
   });
   
   function restartGame() {
-    // Reset player near center
-    player.x = (centerCol + 0.5) * TILE;
-    player.y = (centerRow + 0.5) * TILE;
-    player.vx = player.vy = 0;
-    enemies.length = 0;
-    for (let i=0;i<10;i++) spawnEnemyAtRandom();
-    startTime = performance.now();
-    lastTime = startTime;
-    alive = true;
-    gameOverEl.style.display = 'none';
-    if (!spawnIntervalId) startSpawning();
-    requestAnimationFrame(updateAndRender);
+
+  /* RESET PLAYER */
+  player.x = (centerCol + 0.5) * TILE;
+  player.y = (centerRow + 0.5) * TILE;
+  player.vx = 0;
+  player.vy = 0;
+
+  /* RESET ENEMIES */
+  enemies.length = 0;
+  yellowEnemies.length = 0;
+
+  for (let i = 0; i < 10; i++) {
+    spawnEnemyAtRandom();
   }
+
+  spawnYellowEnemy();
+
+  /* RESET GHOST POWER */
+  ghostPower = null;
+  ghostActive = false;
+  ghostEndTime = 0;
+  ghostTimerEl.textContent = "0.0";
+
+  /* RESET SPAWN SHIELD */
+  spawnCircleActive = true;
+  spawnCircleFade = 1;
+
+  countdown = 5;
+  countdownEl.style.display = "block";
+  countdownEl.textContent = countdown;
+
+  const countdownInterval = setInterval(() => {
+
+    countdown--;
+    countdownEl.textContent = countdown;
+
+    if (countdown <= 0) {
+
+      clearInterval(countdownInterval);
+
+      const fadeInterval = setInterval(() => {
+
+        spawnCircleFade -= 0.05;
+
+        if (spawnCircleFade <= 0) {
+          spawnCircleFade = 0;
+          spawnCircleActive = false;
+          countdownEl.style.display = "none";
+          clearInterval(fadeInterval);
+        }
+
+      }, 50);
+
+    }
+
+  }, 1000);
+
+  /* RESET FOG */
+  fogActive = false;
+  fogRadiusDynamic = 400;
+
+  /* RESET TIMER */
+  startTime = performance.now();
+  lastTime = startTime;
+
+  /* RESET GAME STATE */
+  alive = true;
+  gameOverEl.style.display = "none";
+
+  if (!spawnIntervalId) startSpawning();
+
+  requestAnimationFrame(updateAndRender);
+
+}
 
   /* MOBILE TOUCH CONTROL SYSTEM */
 
