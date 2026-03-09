@@ -793,6 +793,7 @@ bestTimeEl.textContent = bestTime.toFixed(1);
   // Game over display
   const gameOverEl = document.getElementById('gameOver');
   function gameOver() {
+
   alive = false;
   gameOverEl.style.display = 'block';
 
@@ -804,7 +805,16 @@ bestTimeEl.textContent = bestTime.toFixed(1);
     bestTimeEl.textContent = bestTime.toFixed(1);
   }
 
-  if (spawnIntervalId) { clearInterval(spawnIntervalId); spawnIntervalId = null; }
+  if (spawnIntervalId) {
+    clearInterval(spawnIntervalId);
+    spawnIntervalId = null;
+  }
+
+  // Restart automatically after 2 seconds
+  setTimeout(() => {
+    restartGame();
+  }, 2000);
+
 }
 
   // Movement helper: attempt to move circle with collision resolution
