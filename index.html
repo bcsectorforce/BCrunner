@@ -1,0 +1,1546 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<title>BC Runner</title>
+<style>
+/* Reset and full-screen canvas */
+html,body {
+  height:100%;
+  margin:0;
+  padding:0;
+  background:#000;
+  overflow:hidden; /* disable scrolling */
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  touch-action: none;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+}
+
+canvas {
+  position:fixed;
+  left:0;
+  top:0;
+  width:100%;
+  height:100%;
+  display:block;
+  background:#000;
+}
+
+/* UI panel in upper-left */
+#joystick{
+  position:fixed;
+  left:50%;
+  bottom:40px;
+  transform:translateX(-50%);
+  z-index:26;
+  display:none;
+  pointer-events:auto;
+}
+
+#joyBase{
+  width:140px;
+  height:140px;
+  border-radius:50%;
+  background:rgba(0,120,255,0.15);
+  border:2px solid rgba(0,180,255,0.35);
+  backdrop-filter:blur(4px);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+
+#joyStick{
+  width:60px;
+  height:60px;
+  border-radius:50%;
+  background:rgba(0,180,255,0.55);
+  box-shadow:0 0 18px rgba(0,180,255,0.7);
+}
+
+#ui {
+  position:fixed;
+  left:12px;
+  top:50%;
+  transform:translateY(-50%);
+  color:#fff;
+  background:rgba(0,0,0,0.45);
+  border:1px solid rgba(255,255,255,0.06);
+  padding:8px 10px;
+  border-radius:6px;
+  z-index:20;
+  backdrop-filter: blur(4px);
+  min-width:140px;
+}
+
+#musicBtn{
+  position:fixed;
+  left:12px;
+  top:12px;
+  z-index:50;
+  width:42px;
+  height:42px;
+  border-radius:8px;
+  border:1px solid rgba(255,255,255,0.1);
+  background:rgba(0,0,0,0.55);
+  color:#00f0ff;
+  font-size:20px;
+  cursor:pointer;
+}
+
+#countdown{
+  position:fixed;
+  left:50%;
+  top:50%;
+  transform:translate(-50%,-50%);
+  color:#00f0ff;
+  font-size:120px;
+  font-weight:900;
+  text-shadow:0 0 25px #00f0ff;
+  z-index:40;
+}
+
+
+#ui h1 {
+  margin:0 0 6px 0;
+  font-size:14px;
+  color:#bfefff;
+  letter-spacing:0.6px;
+}
+#ui .stat {
+  font-size:13px;
+  color:#ddd;
+}
+#ui .stat strong { color:#fff; }
+
+/* GAME OVER overlay */
+#gameOver {
+  position:fixed;
+  left:50%;
+  top:50%;
+  transform:translate(-50%,-50%);
+  color:#fff;
+  background:rgba(0,0,0,0.6);
+  padding:28px 36px;
+  border-radius:10px;
+  border:2px solid rgba(255,0,0,0.12);
+  font-size:36px;
+  font-weight:700;
+  text-align:center;
+  display:none;
+  z-index:30;
+  pointer-events:none;
+}
+
+/* Mobile control panel */
+#controlsWrap {
+  position:fixed;
+  right:12px;
+  bottom:12px;
+  z-index:25;
+  display:flex;
+  gap:8px;
+  align-items:flex-end;
+  flex-direction:column;
+}
+
+#minimap{
+  position:fixed;
+  right:14px;
+  top:14px;
+  width:160px;
+  height:160px;
+  background:rgba(0,0,0,0.55);
+  border:1px solid rgba(255,255,255,0.08);
+  border-radius:8px;
+  z-index:15;
+  backdrop-filter:blur(4px);
+}
+
+#controls {
+  display:grid;
+  grid-template-columns:repeat(3,56px);
+  grid-template-rows:repeat(3,56px);
+  gap:8px;
+  background:rgba(0,0,0,0.25);
+  padding:10px;
+  border-radius: 10px;
+  border:1px solid rgba(255,255,255,0.04);
+  box-shadow:0 6px 18px rgba(0,0,0,0.6);
+  transform-origin:bottom right;
+}
+
+.btn {
+  width:56px;
+  height:56px;
+  border-radius:8px;
+  background:rgba(255,255,255,0.03);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color:#fff;
+  font-size:20px;
+  user-select:none;
+  -webkit-user-select:none;
+  touch-action: manipulation;
+  border:1px solid rgba(255,255,255,0.03);
+}
+.btn:active { transform:scale(0.96); }
+
+.invisible {
+  background:transparent;
+  border:0;
+  pointer-events:none;
+}
+
+#toggleControls {
+  width:44px;
+  height:44px;
+  border-radius:8px;
+  background:rgba(255,255,255,0.04);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color:#fff;
+  font-size:18px;
+  border:1px solid rgba(255,255,255,0.04);
+}
+
+/* Small responsive tweaks */
+@media (min-width:900px) {
+  #controlsWrap { right:18px; bottom:18px; }
+}
+@media (max-width:520px) {
+  #ui { left:8px; top:8px; padding:6px 8px; }
+  #ui h1 { font-size:13px; }
+  #controls { grid-template-columns:repeat(3,48px); grid-template-rows:repeat(3,48px); gap:6px;
+    padding:8px; }
+  .btn { width:48px; height:48px; font-size: 18px; border-radius:7px; }
+  #toggleControls { width:40px; height:40px; }
+}
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+<canvas id="minimap"></canvas>
+
+
+<button id="musicBtn">🎵</button>
+
+<iframe
+id="scPlayer"
+width="0"
+height="0"
+allow="autoplay"
+src="https://w.soundcloud.com/player/?url=https%3A//api.soundcloud.com/tracks/258007404">
+</iframe>
+
+<script src="https://w.soundcloud.com/player/api.js"></script>
+<!--
+Two lines quoted from your original file (kept here for reference):
+"The code already contains the enemy homing logic: 'Update enemies: homing toward player, but cannot pass through walls'."
+"const desiredVx = (dx / dist) * e.speed;"
+-->
+
+<div id="ui" aria-hidden="false">
+  <h1>BC Runner</h1>
+  <div class="stat">Time Survived: <strong id="timeSurvived">0.0</strong>s</div>
+  <div class="stat">Best Time: <strong id="bestTime">0.0</strong>s</div>
+  <div class="stat">Ghost Power: <strong id="ghostTimer">0.0</strong>s</div>
+</div>
+
+
+
+<div id="gameOver" role="alert">GAME OVER</div>
+
+<div id="countdown">
+5
+</div>
+
+<div id="controlsWrap">
+  <div id="controls" aria-hidden="true" style="display:none;">
+    <!-- Row 1 -->
+    <div class="btn invisible"></div>
+    <button class="btn" data-dir="up" aria-label="Up">▲</button>
+    <div class="btn invisible"></div>
+    <!-- Row 2 -->
+    <button class="btn" data-dir="left" aria-label="Left">◀</button>
+    <div class="btn invisible"></div>
+    <button class="btn" data-dir="right" aria-label="Right">▶</button>
+    <!-- Row 3 -->
+    <div class="btn invisible"></div>
+    <button class="btn" data-dir="down" aria-label="Down">▼</button>
+    <div class="btn invisible"></div>
+  </div>
+  
+  <div id="joystick">
+  <div id="joyBase">
+    <div id="joyStick"></div>
+  </div>
+</div>
+
+  <button id="toggleControls" aria-pressed="false" title="Toggle on-screen controls">☰</button>
+</div>
+
+<script>
+/* BC Runner - single-file implementation
+- Large maze world (~5000x5000)
+- Tile size ~80px
+- Player: cyan circle, smooth movement, collision with walls
+- Enemies: red circles, homing, cannot pass through walls (now with A* pathfinding)
+- Camera centers player
+- Mobile on-screen controls toggleable
+*/
+
+(() =>{
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d', { alpha: false });
+  let W = 0, H = 0;
+  function resize() {
+    W = canvas.width = Math.floor(window.innerWidth * devicePixelRatio);
+    H = canvas.height = Math.floor(window.innerHeight * devicePixelRatio);
+    canvas.style.width = window.innerWidth + 'px';
+    canvas.style.height = window.innerHeight + 'px';
+    ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);
+  }
+  window.addEventListener('resize', resize, { passive:true });
+  resize();
+
+
+const achievements = {
+  survive200:false,
+  survive300:false,
+  ghost50:false
+};
+
+
+
+const iframe = document.getElementById("scPlayer");
+const widget = SC.Widget(iframe);
+const musicBtn = document.getElementById("musicBtn");
+
+let playing = false;
+
+musicBtn.addEventListener("click", () => {
+
+  if(playing){
+    widget.pause();
+    musicBtn.textContent = "🎵";
+  }else{
+    widget.play();
+    musicBtn.textContent = "🔊";
+  }
+
+  playing = !playing;
+
+});
+
+widget.bind(SC.Widget.Events.FINISH, function(){
+  widget.seekTo(0);
+  widget.play();
+});
+
+let ghostUses = 0;
+
+const ghostTimerEl = document.getElementById("ghostTimer");
+
+
+const fogStart = 50000;
+const fogMax = 85000;
+
+let fogActive = false;
+const fogStartTime = fogStart;
+
+let fogRadiusDynamic = 400;
+
+const minimap = document.getElementById("minimap");
+const miniCtx = minimap.getContext("2d");
+
+const MINI_SIZE = 160;
+minimap.width = MINI_SIZE;
+minimap.height = MINI_SIZE;
+
+
+
+  // World and maze parameters
+  const TILE = 80; // approx tile size in pixels
+  const WORLD_PIXELS = 7500;
+  const COLS = Math.ceil(WORLD_PIXELS / TILE);
+  const ROWS = Math.ceil(WORLD_PIXELS / TILE);
+  const WORLD_W = COLS * TILE;
+  const WORLD_H = ROWS * TILE
+  
+  const miniScaleX = MINI_SIZE / WORLD_W;
+const miniScaleY = MINI_SIZE / WORLD_H;
+
+  // Maze grid: 2D array of booleans: true = wall, false = empty
+  const maze = new Array(ROWS);
+  for (let r=0;r<ROWS;r++){
+    maze[r] = new Array(COLS);
+    for (let c=0;c<COLS;c++){
+      // Randomly assign walls ~30%
+      maze[r][c] = Math.random() < 0.30;
+    }
+  }
+
+  // Ensure spawn area near center is open
+  const centerRow = Math.floor(ROWS/2);
+  const centerCol = Math.floor(COLS/2);
+  for (let r=centerRow-2;r <= centerRow+2;r++){
+    for (let c=centerCol-2;c <= centerCol+2;c++){
+      if (r>=0 && r<ROWS && c>=0 && c<COLS) maze[r][c] = false;
+    }
+  }
+
+  // Utility: clamp
+  const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
+
+  // Circle-rectangle collision: circle at (cx,cy) radius r, rect at (rx,ry) size rw,rh
+  function circleRectCollision(cx,cy,r, rx,ry,rw,rh){
+    const nearestX = clamp(cx, rx, rx+rw);
+    const nearestY = clamp(cy, ry, ry+rh);
+    const dx = cx - nearestX;
+    const dy = cy - nearestY;
+    return (dx*dx + dy*dy) < (r*r);
+  }
+
+  // Check if circle collides with any wall tile at given world coords
+  function collidesWithWalls(x,y,r){
+    // Determine tile range to check
+    const left = Math.floor((x- r) / TILE);
+    const right = Math.floor((x + r) / TILE);
+    const top = Math.floor((y - r) / TILE);
+    const bottom = Math.floor((y + r) / TILE);
+    for (let tr = top; tr <= bottom; tr++){
+      if (tr < 0 || tr >= ROWS) continue;
+      for (let tc = left; tc <= right; tc++){
+        if (tc < 0 || tc >= COLS) continue;
+        if (maze[tr][tc]) {
+          const rx = tc * TILE;
+          const ry = tr * TILE;
+          if (circleRectCollision(x,y,r, rx,ry,TILE,TILE)) return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  // Player
+  const player = {
+    x: (centerCol + 0.5) * TILE,
+    y: (centerRow + 0.5) * TILE,
+    r: 12,
+    speed: 180, // pixels per second
+    vx: 0,
+    vy: 0
+  };
+
+let spawnCircleActive = true;
+let spawnCircleRadius = player.r * 10;
+let spawnCircleFade = 1;
+
+const countdownEl = document.getElementById("countdown");
+let countdown = 5;
+
+const countdownInterval = setInterval(()=>{
+
+  countdown--;
+  countdownEl.textContent = countdown;
+
+  if(countdown <= 0){
+
+    clearInterval(countdownInterval);
+
+    const fadeInterval = setInterval(()=>{
+
+      spawnCircleFade -= 0.05;
+
+      if(spawnCircleFade <= 0){
+        spawnCircleFade = 0;
+        spawnCircleActive = false;
+        countdownEl.style.display = "none";
+        clearInterval(fadeInterval);
+      }
+
+    },50);
+
+  }
+
+},1000);
+  // Camera
+  const camera = { x:0, y:0 }; // top-left world coords shown at canvas 0,0
+
+  // Input state
+  const input = { up:false, down:false, left:false, right:false };
+  window.addEventListener('keydown', (e) => {
+    switch(e.key){
+      case 'ArrowUp': case 'w': case 'W': input.up = true; e.preventDefault(); break;
+      case 'ArrowDown': case 's': case 'S': input.down = true; e.preventDefault(); break;
+      case 'ArrowLeft': case 'a': case 'A': input.left = true; e.preventDefault(); break;
+      case 'ArrowRight': case 'd': case 'D': input.right = true; e.preventDefault(); break;
+    }
+  }, { passive:false });
+  window.addEventListener('keyup', (e) => {
+    switch(e.key){
+      case 'ArrowUp': case 'w': case 'W': input.up = false; break;
+      case 'ArrowDown': case 's': case 'S': input.down = false; break;
+      case 'ArrowLeft': case 'a': case 'A': input.left = false; break;
+      case 'ArrowRight': case 'd': case 'D': input.right = false; break;
+    }
+  });
+
+  // Mobile controls
+  const controls = document.getElementById('controls');
+  const toggleControls = document.getElementById('toggleControls');
+  const controlButtons = controls.querySelectorAll('button[data-dir]');
+  let controlsVisible = false;
+  toggleControls.addEventListener('click', () => {
+    controlsVisible = !controlsVisible;
+    controls.style.display = controlsVisible ? 'grid' : 'none';
+    controls.setAttribute('aria-hidden', (!controlsVisible).toString());
+    toggleControls.setAttribute('aria-pressed', controlsVisible.toString());
+  });
+
+  controlButtons.forEach(btn => {
+    const dir = btn.dataset.dir;
+    btn.addEventListener('touchstart', (e) => { e.preventDefault(); input[dir] = true; }, { passive:false });
+    btn.addEventListener('touchend', (e) => { e.preventDefault(); input[dir] = false; }, { passive:false });
+    btn.addEventListener('mousedown', (e) => { e.preventDefault(); input[dir] = true; });
+    btn.addEventListener('mouseup', (e) => { e.preventDefault(); input[dir] = false; });
+    btn.addEventListener('mouseleave', (e) => { input[dir] = false; });
+  });
+
+  // Enemies
+  const enemies = [];
+  
+  const yellowEnemies = [];
+  
+  // Ghost power-up
+let ghostPower = null;
+let ghostActive = false;
+let ghostEndTime = 0;
+  function randomOpenPosition() {
+    // pick random tile until open found
+    for (let attempts=0; attempts<2000; attempts++){
+      const r = Math.floor(Math.random()*ROWS);
+      const c = Math.floor(Math.random()*COLS);
+      if (!maze[r][c]) {
+        // place near center of tile
+        const x = (c + 0.5) * TILE + (Math.random()*TILE - TILE/2) * 0.4;
+        const y = (r + 0.5) * TILE + (Math.random()*TILE - TILE/2) * 0.4;
+        // ensure not too close to player
+        const dx = x - player.x, dy = y - player.y;
+        if (Math.hypot(dx,dy) > 200) return {x,y};
+      }
+    }
+    // fallback: center
+    return { x: player.x + 300, y: player.y + 300 };
+  }
+
+  // --- Pathfinding and enemy behavior additions ---
+  // Parameters (tweak for performance/behavior)
+  const REPATH_INTERVAL = 0.35; // seconds between automatic replans
+  const REPATH_PLAYER_MOVE_THRESHOLD = TILE * 0.5; // player movement to force replan
+  const WAYPOINT_REACH_DIST = 13; // world px to consider waypoint reached
+  const ENEMY_MAX_SPEED_MATCH_PLAYER = true; // set enemies to player's speed
+
+  // Tile/world helpers
+  function worldToTile(x, y) {
+    return { r: Math.floor(y / TILE), c: Math.floor(x / TILE) };
+  }
+  function tileToWorldCenter(r, c) {
+    return { x: (c + 0.5) * TILE, y: (r + 0.5) * TILE };
+  }
+  function inBounds(r, c) {
+    return r >= 0 && r < ROWS && c >= 0 && c < COLS;
+  }
+
+  // A* pathfinder on maze grid (returns array of {x,y} world waypoints or null)
+  function findPath(startX, startY, goalX, goalY) {
+    const start = worldToTile(startX, startY);
+    const goal = worldToTile(goalX, goalY);
+    if (!inBounds(start.r, start.c) || !inBounds(goal.r, goal.c)) return null;
+    if (maze[goal.r][goal.c]) return null; // goal inside wall
+
+    const key = (r, c) => (r << 16) | (c & 0xffff);
+
+    // Heuristic: Euclidean
+    const h = (r, c) => {
+      const dx = (goal.c - c);
+      const dy = (goal.r - r);
+      return Math.hypot(dx, dy);
+    };
+
+    // 8-direction neighbors (allow diagonal if both adjacent tiles free)
+    const neighbors = (r, c) => {
+      const out = [];
+      for (let dr = -1; dr <= 1; dr++) {
+        for (let dc = -1; dc <= 1; dc++) {
+          if (dr === 0 && dc === 0) continue;
+          const nr = r + dr, nc = c + dc;
+          if (!inBounds(nr, nc)) continue;
+          if (maze[nr][nc]) continue;
+          // prevent cutting corners through diagonal between two walls
+          if (Math.abs(dr) + Math.abs(dc) === 2) {
+            if (maze[r + dr][c] || maze[r][c + dc]) continue;
+          }
+          out.push({ r: nr, c: nc });
+        }
+      }
+      return out;
+    };
+
+    // A* open set (simple array)
+    const open = [];
+    const gScore = new Map();
+    const fScore = new Map();
+    const cameFrom = new Map();
+
+    const startKey = key(start.r, start.c);
+    gScore.set(startKey, 0);
+    fScore.set(startKey, h(start.r, start.c));
+    open.push({ r: start.r, c: start.c, f: fScore.get(startKey) });
+
+    while (open.length) {
+      // pop lowest f (linear search)
+      let bestIdx = 0;
+      for (let i = 1; i < open.length; i++) if (open[i].f < open[bestIdx].f) bestIdx = i;
+      const cur = open.splice(bestIdx, 1)[0];
+      const curKey = key(cur.r, cur.c);
+      if (cur.r === goal.r && cur.c === goal.c) {
+        // reconstruct path
+        const pathTiles = [];
+        let k = curKey;
+        while (k !== undefined) {
+          const r = k >> 16;
+          const c = k & 0xffff;
+          pathTiles.push({ r, c });
+          k = cameFrom.get(k);
+        }
+        pathTiles.reverse();
+        const waypoints = pathTiles.map(t => tileToWorldCenter(t.r, t.c));
+        return waypoints;
+      }
+
+      for (const nb of neighbors(cur.r, cur.c)) {
+        const nbKey = key(nb.r, nb.c);
+        const tentativeG = gScore.get(curKey) + Math.hypot(nb.r - cur.r, nb.c - cur.c);
+        if (!gScore.has(nbKey) || tentativeG < gScore.get(nbKey)) {
+          cameFrom.set(nbKey, curKey);
+          gScore.set(nbKey, tentativeG);
+          const f = tentativeG + h(nb.r, nb.c);
+          fScore.set(nbKey, f);
+          if (!open.some(o => o.r === nb.r && o.c === nb.c)) open.push({ r: nb.r, c: nb.c, f });
+        }
+      }
+    }
+    return null; // no path
+  }
+
+  // Spawn: set enemy speed to match player if desired
+  function drawMinimap(){
+
+  miniCtx.clearRect(0,0,MINI_SIZE,MINI_SIZE);
+
+  // background radar look
+  miniCtx.fillStyle = "rgba(0,0,0,0.6)";
+  miniCtx.fillRect(0,0,MINI_SIZE,MINI_SIZE);
+
+  // draw enemies
+  miniCtx.fillStyle = "#ff3b3b";
+  for(const e of enemies){
+
+    const mx = e.x * miniScaleX;
+    const my = e.y * miniScaleY;
+
+    miniCtx.beginPath();
+    miniCtx.arc(mx,my,2.5,0,Math.PI*2);
+    miniCtx.fill();
+  }
+
+miniCtx.fillStyle = "#ffd93b";
+for(const y of yellowEnemies){
+
+  const mx = y.x * miniScaleX;
+  const my = y.y * miniScaleY;
+
+  miniCtx.beginPath();
+  miniCtx.arc(mx,my,2.5,0,Math.PI*2);
+  miniCtx.fill();
+}
+
+  // draw ghost power-up
+if(ghostPower){
+  const gx = ghostPower.x * miniScaleX;
+  const gy = ghostPower.y * miniScaleY;
+
+  miniCtx.beginPath();
+  miniCtx.fillStyle = "#a0ffff"; // same color as in world
+  miniCtx.arc(gx, gy, 3.5, 0, Math.PI*2);
+  miniCtx.fill();
+
+  // glow ring
+  miniCtx.beginPath();
+  miniCtx.strokeStyle = "rgba(160,255,255,0.7)";
+  miniCtx.lineWidth = 1;
+  miniCtx.arc(gx, gy, 6, 0, Math.PI*2);
+  miniCtx.stroke();
+}
+  
+  // draw player
+  const px = player.x * miniScaleX;
+  const py = player.y * miniScaleY;
+
+  miniCtx.beginPath();
+  miniCtx.fillStyle = "#00f0ff";
+  miniCtx.arc(px,py,4,0,Math.PI*2);
+  miniCtx.fill();
+
+
+
+
+  // player glow
+  miniCtx.beginPath();
+  miniCtx.strokeStyle = "rgba(0,240,255,0.6)";
+  miniCtx.lineWidth = 1;
+  miniCtx.arc(px,py,7,0,Math.PI*2);
+  miniCtx.stroke();
+}
+  
+  function spawnEnemyAtRandom() {
+    const pos = randomOpenPosition();
+    const e = {
+      x: pos.x,
+      y: pos.y,
+      r: 10 + Math.random() * 6,
+      speed: ENEMY_MAX_SPEED_MATCH_PLAYER ? player.speed * 0.65 : (60 + Math.random() * 40),
+      path: null,
+      pathIndex: 0,
+      repathTimer: Math.random() * REPATH_INTERVAL, // stagger replans
+      lastPlayerPos: { x: player.x, y: player.y }
+    };
+    enemies.push(e);
+    
+    
+    
+  }
+  
+  function spawnYellowEnemy(){
+  const pos = randomOpenPosition();
+
+  yellowEnemies.push({
+    x: pos.x,
+    y: pos.y,
+    r: 8,
+    speed: player.speed,
+
+    path: null,
+    pathIndex: 0,
+    repathTimer: Math.random() * REPATH_INTERVAL,
+    lastPlayerPos: { x: player.x, y: player.y }
+  });
+}
+  
+  function spawnGhostPower(){
+  const pos = randomOpenPosition();
+  ghostPower = {
+    x: pos.x,
+    y: pos.y,
+    r: 10
+  };
+}
+
+  // initial enemies
+  for (let i=0;i<10;i++) spawnEnemyAtRandom();
+  
+  // start with 1 yellow enemies
+spawnYellowEnemy();
+
+// add more every 30 seconds
+setInterval(()=>{
+  if(alive){
+    spawnYellowEnemy();
+  }
+},49000);
+
+  // spawn more every 30 seconds
+  let spawnIntervalId = null;
+  function startSpawning() {
+    spawnIntervalId = setInterval(() => {
+      for (let i=0;i<3;i++) spawnEnemyAtRandom();
+    }, 30000);
+  }
+  
+  setInterval(() => {
+  if(!ghostPower && alive){
+    spawnGhostPower();
+  }
+}, 10000);
+
+  // Time survived
+const timeEl = document.getElementById('timeSurvived');
+const bestTimeEl = document.getElementById('bestTime');
+
+let bestTime = parseFloat(localStorage.getItem("bcRunnerBestTime")) || 0;
+bestTimeEl.textContent = bestTime.toFixed(1);
+  let startTime = performance.now();
+  let lastTime = startTime;
+  let alive = true;
+
+  // Game over display
+  const gameOverEl = document.getElementById('gameOver');
+  function gameOver() {
+  alive = false;
+  gameOverEl.style.display = 'block';
+
+  const finalTime = (performance.now() - startTime) / 1000;
+
+  if (finalTime > bestTime) {
+    bestTime = finalTime;
+    localStorage.setItem("bcRunnerBestTime", bestTime);
+    bestTimeEl.textContent = bestTime.toFixed(1);
+  }
+
+  if (spawnIntervalId) { clearInterval(spawnIntervalId); spawnIntervalId = null; }
+}
+
+  // Movement helper: attempt to move circle with collision resolution
+  function attemptMove(entity, dx, dy) {
+    // Try full move
+    const nx = entity.x + dx;
+    const ny = entity.y + dy;
+    if (!collidesWithWalls(nx, ny, entity.r)) {
+      entity.x = nx; entity.y = ny;
+      return;
+    }
+    // If blocked, try axis-aligned sliding
+    if (!collidesWithWalls(entity.x + dx, entity.y, entity.r)) {
+      entity.x += dx; return;
+    }
+    if (!collidesWithWalls(entity.x, entity.y + dy, entity.r)) {
+      entity.y += dy; return;
+    }
+    // else blocked; try small incremental steps to slide around
+    const steps = 6;
+    for (let i=1;i <= steps;i++){
+      const fx = dx * (i/steps);
+      const fy = dy * (i/steps);
+      if (!collidesWithWalls(entity.x + fx, entity.y + fy, entity.r)) {
+        entity.x += fx; entity.y += fy; return;
+      }
+    }
+    // cannot move
+  }
+
+  // Update enemies: path-following A* based movement
+  function updateEnemies(dt) {
+    // track player movement for threshold-based replanning
+    const playerMovedDist = Math.hypot(player.x - (updateEnemies._lastPlayerX || player.x), player.y - (updateEnemies._lastPlayerY || player.y));
+    updateEnemies._lastPlayerX = player.x;
+    updateEnemies._lastPlayerY = player.y;
+
+    for (const e of enemies) {
+      // decrement timer
+      e.repathTimer -= dt;
+
+      // decide whether to replan
+      const needRepath = (
+  e.path === null ||
+  e.repathTimer <= 0
+);
+
+      if (needRepath) {
+        const newPath = findPath(e.x, e.y, player.x, player.y);
+        if (newPath && newPath.length > 0) {
+          e.path = newPath;
+e.pathIndex = 1; // skip the tile we are already in
+        } else {
+          // fallback: direct homing if no path found
+          e.path = null;
+        }
+        e.repathTimer = REPATH_INTERVAL;
+        e.lastPlayerPos.x = player.x;
+        e.lastPlayerPos.y = player.y;
+      }
+
+      // Movement: follow path if available, else direct homing
+      let targetX, targetY;
+      if (e.path && e.pathIndex < e.path.length) {
+        const wp = e.path[e.pathIndex];
+        targetX = wp.x;
+        targetY = wp.y;
+        const d = Math.hypot(targetX - e.x, targetY - e.y);
+        if (d < WAYPOINT_REACH_DIST) {
+          e.pathIndex++;
+          if (e.pathIndex >= e.path.length) {
+            // reached final waypoint; small direct approach to player
+            targetX = player.x; targetY = player.y;
+          } else {
+            targetX = e.path[e.pathIndex].x;
+            targetY = e.path[e.pathIndex].y;
+          }
+        }
+      } else {
+        // no path: direct homing
+        targetX = player.x; targetY = player.y;
+      }
+
+      // compute velocity toward target and attempt move (keeps collision handling)
+      // Smooth, collision-aware enemy movement
+// compute velocity toward target
+const dx = targetX - e.x;
+const dy = targetY - e.y;
+const dist = Math.hypot(dx, dy) || 1;
+
+// Move distance for this frame
+const moveDist = e.speed * dt;
+const ratio = Math.min(moveDist / dist, 1);
+let newX = e.x + dx * ratio;
+let newY = e.y + dy * ratio;
+
+if(spawnCircleActive){
+
+  const cx = (centerCol + 0.5) * TILE;
+  const cy = (centerRow + 0.5) * TILE;
+
+  const dist = Math.hypot(newX - cx, newY - cy);
+
+  if(dist < spawnCircleRadius + e.r){
+    // stop enemy at circle boundary
+  }else{
+    attemptMove(e, dx * ratio, dy * ratio);
+  }
+
+}else{
+  attemptMove(e, dx * ratio, dy * ratio);
+}
+
+// Recalculate remaining distance AFTER move
+const newDx = targetX - e.x;
+const newDy = targetY - e.y;
+const newDist = Math.hypot(newDx, newDy);
+if (newDist <= WAYPOINT_REACH_DIST) {
+    e.pathIndex++;
+}
+    }
+  }
+
+
+function updateYellowEnemies(dt){
+
+  for(const e of yellowEnemies){
+
+    e.repathTimer -= dt;
+
+    const needRepath =
+      e.path === null ||
+      e.repathTimer <= 0;
+
+    if(needRepath){
+      const newPath = findPath(e.x, e.y, player.x, player.y);
+
+      if(newPath && newPath.length > 0){
+        e.path = newPath;
+        e.pathIndex = 1;
+      }else{
+        e.path = null;
+      }
+
+      e.repathTimer = REPATH_INTERVAL;
+    }
+
+    let targetX, targetY;
+
+    if(e.path && e.pathIndex < e.path.length){
+      const wp = e.path[e.pathIndex];
+      targetX = wp.x;
+      targetY = wp.y;
+
+      const d = Math.hypot(targetX - e.x, targetY - e.y);
+      if(d < WAYPOINT_REACH_DIST){
+        e.pathIndex++;
+      }
+
+    }else{
+      targetX = player.x;
+      targetY = player.y;
+    }
+
+    const dx = targetX - e.x;
+    const dy = targetY - e.y;
+    const dist = Math.hypot(dx,dy) || 1;
+
+    const moveDist = e.speed * dt;
+    const ratio = Math.min(moveDist/dist,1);
+
+    let newX = e.x + dx * ratio;
+let newY = e.y + dy * ratio;
+
+if(spawnCircleActive){
+
+  const cx = (centerCol + 0.5) * TILE;
+  const cy = (centerRow + 0.5) * TILE;
+
+  const dist = Math.hypot(newX - cx, newY - cy);
+
+  if(dist < spawnCircleRadius + e.r){
+    // enemy blocked by barrier
+  }else{
+    attemptMove(e, dx*ratio, dy*ratio);
+  }
+
+}else{
+  attemptMove(e, dx*ratio, dy*ratio);
+}
+  }
+}
+
+  // Main loop
+  function updateAndRender(now) {
+    if (!alive) {
+      // draw final frame static (we still want the last scene visible)
+      renderScene();
+      return;
+    }
+    const dt = Math.min(0.05, (now - lastTime) / 1000);
+    lastTime = now;
+
+    // Update time survived
+    const elapsed = (now - startTime) / 1000;
+    timeEl.textContent = elapsed.toFixed(1);
+    
+    if(elapsed * 1000 > fogStartTime){
+  fogActive = true;
+}
+
+if(elapsed > 200 && !achievements.survive200){
+  achievements.survive200 = true;
+  alert("Achievement Unlocked: Survivor (200s)");
+}
+
+if(elapsed > 300 && !achievements.survive300){
+  achievements.survive300 = true;
+  alert("Achievement Unlocked: Legend (300s)");
+}
+
+    
+   if(elapsed*1000 > fogStart){
+
+  const progress = Math.min(1,(elapsed*1000 - fogStart)/(fogMax - fogStart));
+
+  fogRadiusDynamic = 400 - progress*260;
+
+  fogActive = true;
+}
+   
+    if(ghostActive){
+  const remaining = Math.max(0,(ghostEndTime - performance.now())/1000);
+  ghostTimerEl.textContent = remaining.toFixed(1);
+}else{
+  ghostTimerEl.textContent = "0.0";
+}
+    
+    // Player input -> velocity
+    let ax = joyVectorX;
+let ay = joyVectorY;
+
+if(ax === 0 && ay === 0){
+  if (input.up) ay -= 1;
+  if (input.down) ay += 1;
+  if (input.left) ax -= 1;
+  if (input.right) ax += 1;
+}
+    // normalize
+    if (ax !== 0 || ay !== 0) {
+      const len = Math.hypot(ax, ay);
+      ax /= len; ay /= len;
+      const speed = player.speed;
+      player.vx = ax * speed;
+      player.vy = ay * speed;
+    } else {
+      // smooth deceleration
+      player.vx *= 0.7;
+      player.vy *= 0.7;
+      if (Math.abs(player.vx) < 1) player.vx = 0;
+      if (Math.abs(player.vy) < 1) player.vy = 0;
+    }
+
+    // Attempt to move player with collision checks
+    if(ghostActive){
+  player.x += player.vx * dt;
+  player.y += player.vy * dt;
+}else{
+  if(spawnCircleActive){
+
+  const nx = player.x + player.vx * dt;
+  const ny = player.y + player.vy * dt;
+
+  const dx = nx - ((centerCol + 0.5) * TILE);
+  const dy = ny - ((centerRow + 0.5) * TILE);
+
+  if(Math.hypot(dx,dy) <= spawnCircleRadius){
+    attemptMove(player, player.vx * dt, player.vy * dt);
+  }
+
+}else{
+  attemptMove(player, player.vx * dt, player.vy * dt);
+}
+}
+
+    // Update enemies using path-following
+    updateEnemies(dt);
+    updateYellowEnemies(dt);
+    
+    
+
+    // Collect ghost power
+if(ghostPower){
+  const dx = ghostPower.x - player.x;
+  const dy = ghostPower.y - player.y;
+
+  if(Math.hypot(dx,dy) < ghostPower.r + player.r){
+    ghostPower = null;
+    ghostActive = true;
+    ghostEndTime = performance.now() + 10000; // 10 seconds
+  }
+}
+  
+  if(ghostActive && performance.now() > ghostEndTime){
+
+  ghostActive = false;
+
+  // if player ended inside a wall, teleport to safe location
+  if(collidesWithWalls(player.x, player.y, player.r)){
+    const pos = randomOpenPosition();
+    player.x = pos.x;
+    player.y = pos.y;
+  }
+} 
+    
+    // Collision detection between player and enemies
+    // red enemy collision
+for (const e of enemies) {
+  const dx = e.x - player.x;
+  const dy = e.y - player.y;
+
+  if (dx*dx + dy*dy < (e.r + player.r)**2) {
+    gameOver();
+  }
+}
+
+// yellow enemy collision
+for (const y of yellowEnemies){
+  const dx = y.x - player.x;
+  const dy = y.y - player.y;
+
+  if(dx*dx + dy*dy < (y.r + player.r)**2){
+    gameOver();
+  }
+}
+
+    // Camera: center player smoothly
+    const targetCamX = player.x - (window.innerWidth / 2);
+    const targetCamY = player.y - (window.innerHeight / 2);
+    // Smooth camera lerp
+    camera.x += (targetCamX - camera.x) * clamp(10 * dt, 0, 1);
+    camera.y += (targetCamY - camera.y) * clamp(10 * dt, 0, 1);
+    // clamp camera to world bounds
+    camera.x = clamp(camera.x, 0, WORLD_W - W);
+camera.y = clamp(camera.y, 0, WORLD_H - H);
+
+    // Render
+    renderScene();
+
+    // Continue loop
+    if (alive) requestAnimationFrame(updateAndRender);
+  }
+
+  // Render function
+  function renderScene() {
+    // Clear
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0,0,window.innerWidth, window.innerHeight);
+
+    // Determine visible tile range
+    const viewLeft = Math.floor(camera.x);
+    const viewTop = Math.floor(camera.y);
+    const viewRight = Math.ceil(camera.x + window.innerWidth);
+    const viewBottom = Math.ceil(camera.y + window.innerHeight);
+
+    const startCol = Math.floor(viewLeft / TILE);
+    const endCol = Math.floor(viewRight / TILE);
+    const startRow = Math.floor(viewTop / TILE);
+    const endRow = Math.floor(viewBottom / TILE);
+
+    // Draw tiles
+    for (let r = startRow; r <= endRow; r++) {
+      if (r < 0 || r >= ROWS) continue;
+      for (let c = startCol; c <= endCol; c++) {
+        if (c < 0 || c >= COLS) continue;
+        if (maze[r][c]) {
+          const sx = c * TILE - camera.x;
+          const sy = r * TILE - camera.y;
+          // wall: dark gray block
+          ctx.fillStyle = '#2b2b2b';
+          ctx.fillRect(Math.round(sx), Math.round(sy), TILE, TILE);
+          // subtle edge
+          ctx.strokeStyle = 'rgba(0,0,0,0.25)';
+          ctx.lineWidth = 1;
+          ctx.strokeRect(Math.round(sx)+0.5, Math.round(sy)+0.5, TILE-1, TILE-1);
+        } else {
+          // empty tile: keep black (no draw)
+        }
+      }
+    }
+
+if(spawnCircleActive || spawnCircleFade > 0){
+
+  const cx = (centerCol + 0.5) * TILE - camera.x;
+  const cy = (centerRow + 0.5) * TILE - camera.y;
+
+  ctx.beginPath();
+  ctx.strokeStyle = "rgba(0,255,255," + spawnCircleFade + ")";
+  ctx.lineWidth = 4;
+  ctx.arc(cx,cy,spawnCircleRadius,0,Math.PI*2);
+  ctx.stroke();
+
+}
+
+    // Draw player
+    const px = player.x - camera.x;
+    const py = player.y - camera.y;
+    ctx.beginPath();
+    ctx.fillStyle = ghostActive ? "rgba(160,255,255,0.6)" : "#00f0ff";
+    ctx.arc(px, py, player.r, 0, Math.PI*2);
+    ctx.fill();
+    // small highlight
+    ctx.beginPath();
+    ctx.fillStyle = 'rgba(255,255,255,0.12)';
+    ctx.arc(px - player.r*0.35, py - player.r*0.35, player.r*0.35, 0, Math.PI*2);
+    ctx.fill();
+
+    // Draw enemies
+    
+    for(const y of yellowEnemies){
+
+  const ex = y.x - camera.x;
+  const ey = y.y - camera.y;
+
+  ctx.beginPath();
+  ctx.fillStyle = "#ffd93b";
+  ctx.arc(ex,ey,y.r,0,Math.PI*2);
+  ctx.fill();
+}
+    
+    for (const e of enemies) {
+      const ex = e.x - camera.x;
+      const ey = e.y - camera.y;
+      
+      
+      // Draw ghost power-up
+
+      // Only draw if on screen (simple cull)
+      if (ex + e.r < 0 || ex - e.r > window.innerWidth || ey + e.r < 0 || ey - e.r > window.innerHeight)
+        continue;
+      ctx.beginPath();
+      ctx.fillStyle = '#ff3b3b';
+      ctx.arc(ex, ey, e.r, 0, Math.PI*2);
+      ctx.fill();
+      // dark inner
+      ctx.beginPath();
+      ctx.fillStyle = 'rgba(0,0,0,0.12)';
+      ctx.arc(ex - e.r*0.25, ey - e.r*0.25, e.r*0.35, 0, Math.PI*2);
+      ctx.fill();
+    }
+    
+    if(ghostPower){
+  const gx = ghostPower.x - camera.x;
+  const gy = ghostPower.y - camera.y;
+
+  ctx.save();
+
+  // glow
+  ctx.shadowColor = "#8fffff";
+  ctx.shadowBlur = 20;
+
+  ctx.font = "28px serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+
+  ctx.fillText("👻", gx, gy);
+
+  ctx.restore();
+}
+
+    // Optional: draw debug grid (disabled by default)
+    // draw minimap or other overlays could be added here
+  try {
+  drawMinimap();
+} catch(e) {}
+    
+  
+ if(fogActive){
+
+  const px = player.x - camera.x;
+  const py = player.y - camera.y;
+
+  const gradient = ctx.createRadialGradient(
+    px, py, 80,
+    px, py, fogRadiusDynamic
+  );
+
+  gradient.addColorStop(0, "rgba(0,0,0,0)");
+  gradient.addColorStop(1, "rgba(0,0,0,0.60)");
+
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0,0,window.innerWidth,window.innerHeight);
+}
+    
+  }
+
+  // Start game
+  startSpawning();
+  requestAnimationFrame((t) => { lastTime = t; startTime = t;
+    requestAnimationFrame(updateAndRender); });
+
+  // Prevent context menu on long press
+  window.addEventListener('contextmenu', (e) => e.preventDefault());
+
+  // Pause/resume on visibility change (simple approach)
+  let savedLastTime = null;
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      savedLastTime = lastTime;
+    } else {
+      // reset timing so dt doesn't spike
+      lastTime = performance.now();
+    }
+  });
+
+  // Expose a simple restart function (keyboard 'r')
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'r' || e.key === 'R') {
+      if (!alive) restartGame();
+    }
+  });
+  
+  function restartGame() {
+    // Reset player near center
+    player.x = (centerCol + 0.5) * TILE;
+    player.y = (centerRow + 0.5) * TILE;
+    player.vx = player.vy = 0;
+    enemies.length = 0;
+    for (let i=0;i<10;i++) spawnEnemyAtRandom();
+    startTime = performance.now();
+    lastTime = startTime;
+    alive = true;
+    gameOverEl.style.display = 'none';
+    if (!spawnIntervalId) startSpawning();
+    requestAnimationFrame(updateAndRender);
+  }
+
+  /* MOBILE TOUCH CONTROL SYSTEM */
+
+/* JOYSTICK CONTROL SYSTEM */
+
+const joystick = document.getElementById("joystick");
+const joyBase = document.getElementById("joyBase");
+const joyStick = document.getElementById("joyStick");
+
+let joyActive = false;
+let joyTouch = null;
+const JOY_RADIUS = 50;
+
+let joyVectorX = 0;
+let joyVectorY = 0;
+
+toggleControls.addEventListener("click",()=>{
+
+  if(joystick.style.display === "none"){
+    joystick.style.display = "block";
+  }else{
+    joystick.style.display = "none";
+  }
+
+});
+
+joystick.addEventListener("touchstart",(e)=>{
+
+  const t = e.touches[0];
+  joyTouch = t.identifier;
+  joyActive = true;
+
+},{passive:true});
+
+window.addEventListener("touchmove",(e)=>{
+
+  if(!joyActive) return;
+
+  for(const t of e.touches){
+
+    if(t.identifier === joyTouch){
+
+      const rect = joyBase.getBoundingClientRect();
+
+      const cx = rect.left + rect.width/2;
+      const cy = rect.top + rect.height/2;
+
+      let dx = t.clientX - cx;
+      let dy = t.clientY - cy;
+
+      const dist = Math.hypot(dx,dy);
+
+      if(dist > JOY_RADIUS){
+        dx = dx/dist * JOY_RADIUS;
+        dy = dy/dist * JOY_RADIUS;
+      }
+
+      joyStick.style.transform = `translate(${dx}px,${dy}px)`;
+
+      joyVectorX = dx / JOY_RADIUS;
+joyVectorY = dy / JOY_RADIUS;
+
+    }
+
+  }
+
+},{passive:true});
+
+window.addEventListener("touchend",(e)=>{
+
+  for(const t of e.changedTouches){
+
+    if(t.identifier === joyTouch){
+
+      joyActive = false;
+      joyTouch = null;
+
+      joyStick.style.transform = "translate(0px,0px)";
+      
+      joyVectorX = 0;
+joyVectorY = 0;
+
+      input.left = false;
+      input.right = false;
+      input.up = false;
+      input.down = false;
+
+    }
+
+  }
+
+},{passive:true});
+
+
+
+let dragTouch = null;
+let holdTouch = null;
+
+function screenToWorld(x,y){
+  return {
+    x: x + camera.x,
+    y: y + camera.y
+  };
+}
+
+window.addEventListener("touchstart", (e)=>{
+
+  for(const t of e.changedTouches){
+
+    const world = screenToWorld(t.clientX, t.clientY);
+
+    const dx = world.x - player.x;
+    const dy = world.y - player.y;
+
+    const dist = Math.hypot(dx,dy);
+
+    /* TOUCH ON PLAYER = DRAG CONTROL */
+    if(dist < player.r * 3 && dragTouch === null){
+
+      dragTouch = t.identifier;
+
+    }else if(holdTouch === null){
+
+      /* TOUCH ELSEWHERE = HOLD DIRECTION CONTROL */
+      holdTouch = t.identifier;
+
+    }
+  }
+
+},{passive:true});
+
+
+window.addEventListener("touchmove",(e)=>{
+
+  for(const t of e.touches){
+
+    /* DRAG PLAYER */
+    if(t.identifier === dragTouch){
+
+      const world = screenToWorld(t.clientX,t.clientY);
+
+      const dx = world.x - player.x;
+      const dy = world.y - player.y;
+
+      const dist = Math.hypot(dx,dy) || 1;
+
+      player.vx = (dx/dist) * player.speed;
+      player.vy = (dy/dist) * player.speed;
+
+    }
+
+    /* HOLD SIDE OF SCREEN */
+    if(t.identifier === holdTouch){
+
+      const cx = window.innerWidth/2;
+      const cy = window.innerHeight/2;
+
+      const dx = t.clientX - cx;
+      const dy = t.clientY - cy;
+
+      input.left = false;
+      input.right = false;
+      input.up = false;
+      input.down = false;
+
+      if(Math.abs(dx) > Math.abs(dy)){
+        if(dx > 0) input.right = true;
+        else input.left = true;
+      }else{
+        if(dy > 0) input.down = true;
+        else input.up = true;
+      }
+
+    }
+
+  }
+
+},{passive:true});
+
+
+window.addEventListener("touchend",(e)=>{
+
+  for(const t of e.changedTouches){
+
+    if(t.identifier === dragTouch){
+      dragTouch = null;
+      player.vx = 0;
+      player.vy = 0;
+    }
+
+    if(t.identifier === holdTouch){
+      holdTouch = null;
+      input.left = input.right = input.up = input.down = false;
+    }
+
+  }
+
+},{passive:true});
+
+})();
+</script>
+</body>
+</html>
