@@ -250,7 +250,7 @@ Two lines quoted from your original file (kept here for reference):
   <div class="stat">Time: <strong id="timeSurvived">0.0</strong>s</div>
   <div class="stat">Best Time: <strong id="bestTime">0.0</strong>s</div>
   <div class="stat">Ghost time: <strong id="ghostTimer">0.0</strong>s</div>
-<button onclick="openGameBlank()">Launch in about:blank</button>
+<button onclick="openGameBlank()">Launch in about:blank!</button>
 </div>
 
 
@@ -643,7 +643,7 @@ let ghostEndTime = 0;
 
   // Spawn: set enemy speed to match player if desired
 
-  function openGameBlank(){
+  window.openGameBlank = function(){
 
 const win = window.open("about:blank","_blank");
 
